@@ -29,10 +29,10 @@ from ...processing_utils import Unpack
 from ...utils import TransformersKwargs, auto_docstring, can_return_tuple, logging
 from ..auto import CONFIG_MAPPING, AutoConfig
 from ..exaone4_5.modeling_exaone4_5 import Exaone4_5_ForConditionalGeneration
-from ..exaone4_5.processing_exaone4_5 import Exaone4_5_Processor
 from ..gemma3.modeling_gemma3 import Gemma3ForSequenceClassification
 from ..video_llama_3.modeling_video_llama_3 import VideoLlama3Model, VideoLlama3PreTrainedModel
-
+from ..qwen2_5_vl_vision.configuration_qwen2_5_vl_vision import Qwen2_5_VLVisionConfig
+from ..hyperclovax.configuration_hyperclovax import HyperCLOVAXConfig
 
 logger = logging.get_logger(__name__)
 
@@ -67,34 +67,16 @@ class HyperCLOVAXVisionV2Config(PreTrainedConfig):
 
     def __post_init__(self, **kwargs):
         if isinstance(self.vision_config, dict):
-            model_type = self.vision_config.get("model_type", "qwen2_5_vl_vision")
-            # The Hub config uses the full Qwen2.5-VL type for the vision transformer.
-            model_type = "qwen2_5_vl_vision" if model_type == "qwen2_5_vl" else model_type
-            self.vision_config["model_type"] = model_type
-            self.vision_config = CONFIG_MAPPING[model_type](**self.vision_config)
+            self.vision_config = Qwen2_5_VLVisionConfig(**self.vision_config)
         elif self.vision_config is None:
-            self.vision_config = CONFIG_MAPPING["qwen2_5_vl_vision"]()
+            self.vision_config = Qwen2_5_VLVisionConfig()
 
         if isinstance(self.text_config, dict):
-            model_type = self.text_config.get("model_type", "hyperclovax")
-            self.text_config = CONFIG_MAPPING[model_type](**self.text_config)
+            self.text_config = HyperCLOVAXConfig(**self.text_config)
         elif self.text_config is None:
-            self.text_config = CONFIG_MAPPING["hyperclovax"]()
-
-        # This is necessary to properly find the weight conversion mapping.
-        if kwargs.get("model_type") == "vlm":
-            kwargs["model_type"] = "hyperclovax_vision_v2"
+            self.text_config = HyperCLOVAXConfig()
 
         super().__post_init__(**kwargs)
-
-
-@auto_docstring
-class HyperCLOVAXVisionV2Processor(Exaone4_5_Processor):
-    @property
-    def model_input_names(self):
-        # HyperCLOVAX Vision V2 does not use second_per_grid_ts (no temporal RoPE)
-        names = super().model_input_names
-        return [n for n in names if n not in ("second_per_grid_ts")]
 
 
 @auto_docstring
@@ -385,5 +367,4 @@ __all__ = [
     "HyperCLOVAXVisionV2ForSequenceClassification",
     "HyperCLOVAXVisionV2Model",
     "HyperCLOVAXVisionV2PreTrainedModel",
-    "HyperCLOVAXVisionV2Processor",
 ]
